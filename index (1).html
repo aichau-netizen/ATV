@@ -6,23 +6,28 @@
     <title>Tham Quan Hệ Sinh Thái Biển 360°</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; }
-        /* Nút bấm yêu cầu quyền cảm biến bắt buộc cho thiết bị di động */
+        body { margin: 0; overflow: hidden; font-family: sans-serif; background-color: #000; }
+        
+        /* Giao diện nút bấm tối ưu, nổi bật */
         #vr-btn {
             position: fixed;
-            bottom: 30px;
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 9999;
-            padding: 15px 30px;
-            background-color: #0077b6;
+            padding: 18px 36px;
+            background: linear-gradient(135deg, #0077b6, #00b4d8);
             color: white;
             border: none;
-            border-radius: 30px;
+            border-radius: 50px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            box-shadow: 0 5px 15px rgba(0, 119, 182, 0.4);
+            transition: all 0.3s ease;
+        }
+        #vr-btn:active {
+            transform: translateX(-50%) scale(0.95);
         }
         #instruction {
             position: fixed;
@@ -32,29 +37,32 @@
             color: white;
             z-index: 9999;
             font-size: 16px;
-            text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+            font-weight: 500;
+            text-shadow: 1px 1px 6px rgba(0,0,0,0.9);
             pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <div id="instruction">Xoay điện thoại hoặc vuốt màn hình để nhìn xung quanh 360°</div>
+    <div id="instruction">Xoay thiết bị hoặc vuốt màn hình để nhìn xung quanh 360°</div>
     <button id="vr-btn">BẬT CẢM BIẾN & XEM VIDEO</button>
 
-    <a-scene loading-screen="enabled: false">
-        <a-assets>
+    <a-scene loading-screen="enabled: false" renderer="colorManagement: true">
+        <a-assets timeout="10000">
             <video id="underwater-video" 
-                   src="video360.mp4" 
+                   src="YTSave_YouTube_Video-4k-Ultra-Canh-Hoang-Hon-Buong-Dep-_Media_7uay0tpKFkQ_003_480p.mp4" 
                    preload="auto"
                    loop="true" 
                    crossorigin="anonymous" 
                    playsinline 
-                   webkit-playsinline>
-            </video>
+                   webkit-playsinline
+                   muted> </video>
         </a-assets>
 
-        <a-entity camera look-controls="magicWindowTrackingEnabled: true; touchEnabled: true"></a-entity>
+        <a-entity id="rig">
+            <a-camera id="camera" look-controls="magicWindowTrackingEnabled: true; touchEnabled: true"></a-camera>
+        </a-entity>
 
         <a-videosphere src="#underwater-video" rotation="0 -90 0"></a-videosphere>
     </a-scene>
@@ -63,30 +71,41 @@
         const playButton = document.getElementById('vr-btn');
         const videoElement = document.getElementById('underwater-video');
 
-        playButton.addEventListener('click', function() {
-            // Kích hoạt phát video ngay khi người dùng tương tác ấn nút
+        // Hàm xử lý kích hoạt phát video và cảm biến
+        function initInteractions() {
+            // 1. Bật âm thanh trở lại (vì ban đầu để muted để lách luật trình duyệt)
+            videoElement.muted = false;
+
+            // 2. Phát video với lời hứa (Promise) xử lý lỗi chặt chẽ
             videoElement.play().then(() => {
-                console.log("Video đang phát thành công!");
+                console.log("Video đang phát mượt mà.");
+                playButton.style.display = 'none'; // Ẩn nút khi đã phát thành công
             }).catch(function(error) {
-                console.log("Lỗi phát video: ", error);
+                console.error("Trình duyệt chặn phát video: ", error);
+                // Thử phát lại ở chế độ câm nếu bị chặn gắt gao
+                videoElement.muted = true;
+                videoElement.play();
+                playButton.style.display = 'none';
             });
 
-            // Yêu cầu quyền cảm biến chuyển động đối với iPhone (iOS 13 trở lên)
+            // 3. Xin quyền cảm biến con quay hồi chuyển (Đặc trị cho iOS / iPhone)
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(permissionState => {
                         if (permissionState === 'granted') {
-                            playButton.style.display = 'none'; // Cấp quyền thành công, ẩn nút
+                            console.log("Quyền cảm biến được chấp thuận.");
                         } else {
-                            alert('Bạn cần cho phép quyền cảm biến chuyển động để xoay được góc nhìn!');
+                            alert('Bạn cần cấp quyền chuyển động trong cài đặt trình duyệt để xoay được góc nhìn!');
                         }
                     })
                     .catch(console.error);
-            } else {
-                // Với Android hoặc máy tính, cảm biến tự động chạy nên ẩn nút kích hoạt ngay
-                playButton.style.display = 'none';
             }
-        });
+        }
+
+        // Lắng nghe sự kiện click từ người dùng
+        playButton.addEventListener('click', initInteractions);
+        // Hỗ trợ thêm sự kiện chạm trên thiết bị di động để phản hồi nhanh hơn
+        playButton.addEventListener('touchend', initInteractions);
     </script>
 </body>
 </html>
